@@ -6,6 +6,12 @@ The menu-bar label shows the lowest remaining quota (`Codex 84%`). Click it to s
 
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black?logo=apple) ![Swift 6](https://img.shields.io/badge/Swift-6-orange?logo=swift)
 
+## Preview
+
+![Illustrative preview of the Codex Usage Menu popover](assets/menu-preview.png)
+
+*Illustrative preview of the native menu-bar interface. Your available quota windows, percentages, and reset times will reflect your own account.*
+
 ## Requirements
 
 - macOS 13 (Ventura) or later
