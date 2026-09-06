@@ -42,21 +42,22 @@ private struct UsageMenu: View {
             Divider()
             footer
         }
-        .frame(width: 344, alignment: .leading)
+        .frame(width: 380, alignment: .leading)
     }
 
     private var header: some View {
-        VStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             Text("Codex Usage")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
             if let plan = monitor.snapshot?.planType {
                 Text(plan.capitalized + " plan")
-                    .font(.system(size: 11))
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 15)
     }
 
     private func snapshotContent(_ snapshot: UsageSnapshot) -> some View {
@@ -65,20 +66,20 @@ private struct UsageMenu: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(window.name)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 14, weight: .semibold))
                         Spacer()
                         Text("\(window.remainingPercent)% left")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 14, weight: .semibold))
                             .monospacedDigit()
                     }
                     if let resetText = window.resetText {
                         Text(resetText)
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 12)
+                .padding(.vertical, 15)
 
                 if window.id != snapshot.windows.last?.id {
                     Divider()
@@ -88,26 +89,26 @@ private struct UsageMenu: View {
             if snapshot.availableResetCredits > 0 {
                 Divider()
                 Text("\(snapshot.availableResetCredits) reset credit available")
-                    .font(.system(size: 12))
+                    .font(.system(size: 13))
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 12)
             }
 
             Divider()
             Text("Updated \(snapshot.updatedAt.formatted(date: .omitted, time: .shortened))")
-                .font(.system(size: 11))
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 12)
             Text("Automatically refreshes every minute")
-                .font(.system(size: 11))
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 4)
-                .padding(.bottom, 10)
+                .padding(.bottom, 12)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 18)
     }
 
     private var footer: some View {
@@ -115,15 +116,17 @@ private struct UsageMenu: View {
             Button("Refresh now") { monitor.refresh() }
                 .disabled(monitor.isRefreshing)
                 .buttonStyle(.plain)
-                .font(.system(size: 13, weight: .medium))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 11)
+                .font(.system(size: 14, weight: .medium))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 13)
             Divider()
             Button("Quit Codex Usage Menu") { NSApplication.shared.terminate(nil) }
                 .buttonStyle(.plain)
-                .font(.system(size: 13))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 11)
+                .font(.system(size: 14))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 13)
         }
     }
 }
