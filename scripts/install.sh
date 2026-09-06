@@ -13,5 +13,6 @@ install -m 755 "$project_dir/.build/release/CodexUsageMenu" "$binary_path"
 install -m 644 "$project_dir/launchd/com.codexusagemenu.app.plist" "$agent_path"
 
 launchctl bootout "gui/$(id -u)/com.codexusagemenu.app" 2>/dev/null || true
+sleep 1
 launchctl bootstrap "gui/$(id -u)" "$agent_path"
 echo "Installed. Codex usage is now in the menu bar."
