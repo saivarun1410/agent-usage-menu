@@ -20,59 +20,111 @@ private struct UsageMenu: View {
     @ObservedObject var monitor: UsageMonitor
 
     var body: some View {
-        Group {
-            Text("Codex Usage")
-                .font(.headline)
+        VStack(spacing: 0) {
+            header
+            Divider()
 
             if let snapshot = monitor.snapshot {
-                if let plan = snapshot.planType {
-                    Text(plan.capitalized + " plan")
-                        .foregroundStyle(.secondary)
-                }
+                snapshotContent(snapshot)
+            } else if let error = monitor.errorMessage {
+                Text(error)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 16)
+            } else {
+                ProgressView("Loading usage…")
+                    .font(.system(size: 12))
+                    .padding(.vertical, 16)
+            }
 
-                ForEach(snapshot.windows) { window in
-                    Divider()
-                    HStack {
+            Divider()
+            footer
+        }
+        .frame(width: 344, alignment: .leading)
+    }
+
+    private var header: some View {
+        VStack(spacing: 2) {
+            Text("Codex Usage")
+                .font(.system(size: 15, weight: .semibold))
+            if let plan = monitor.snapshot?.planType {
+                Text(plan.capitalized + " plan")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+    }
+
+    private func snapshotContent(_ snapshot: UsageSnapshot) -> some View {
+        VStack(spacing: 0) {
+            ForEach(snapshot.windows) { window in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline) {
                         Text(window.name)
+                            .font(.system(size: 13, weight: .medium))
                         Spacer()
                         Text("\(window.remainingPercent)% left")
+                            .font(.system(size: 13, weight: .medium))
                             .monospacedDigit()
                     }
                     if let resetText = window.resetText {
                         Text(resetText)
-                            .font(.caption)
+                            .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
 
-                if snapshot.availableResetCredits > 0 {
+                if window.id != snapshot.windows.last?.id {
                     Divider()
-                    Text("\(snapshot.availableResetCredits) reset credit available")
-                        .foregroundStyle(.secondary)
                 }
+            }
 
+            if snapshot.availableResetCredits > 0 {
                 Divider()
-                Text("Updated \(snapshot.updatedAt.formatted(date: .omitted, time: .shortened))")
-                    .font(.caption)
+                Text("\(snapshot.availableResetCredits) reset credit available")
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
-            } else if let error = monitor.errorMessage {
-                Text(error)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                ProgressView("Loading usage…")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
             }
 
             Divider()
-            Text("Automatically refreshes every minute")
-                .font(.caption)
+            Text("Updated \(snapshot.updatedAt.formatted(date: .omitted, time: .shortened))")
+                .font(.system(size: 11))
                 .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 10)
+            Text("Automatically refreshes every minute")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 4)
+                .padding(.bottom, 10)
+        }
+        .padding(.horizontal, 14)
+    }
+
+    private var footer: some View {
+        VStack(spacing: 0) {
             Button("Refresh now") { monitor.refresh() }
                 .disabled(monitor.isRefreshing)
+                .buttonStyle(.plain)
+                .font(.system(size: 13, weight: .medium))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+            Divider()
             Button("Quit Codex Usage Menu") { NSApplication.shared.terminate(nil) }
+                .buttonStyle(.plain)
+                .font(.system(size: 13))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
         }
-        .padding(12)
-        .frame(minWidth: 250, alignment: .leading)
     }
 }
 
