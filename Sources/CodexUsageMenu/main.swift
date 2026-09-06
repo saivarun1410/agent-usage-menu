@@ -137,7 +137,7 @@ private struct UsageMenu: View {
                 .padding(.horizontal, 18)
                 .padding(.vertical, 13)
             Divider()
-            Button("Quit Codex Usage Menu") { NSApplication.shared.terminate(nil) }
+            Button("Quit Agent Usage Menu") { NSApplication.shared.terminate(nil) }
                 .buttonStyle(.plain)
                 .font(.system(size: 14))
                 .frame(maxWidth: .infinity, alignment: .leading)

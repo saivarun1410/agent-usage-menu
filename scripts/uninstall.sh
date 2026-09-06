@@ -8,4 +8,4 @@ if [[ -x "$claude_capture_path" ]]; then
 fi
 launchctl bootout "gui/$(id -u)/com.codexusagemenu.app" 2>/dev/null || true
 rm -f "$agent_path" "$HOME/.local/bin/codex-usage-menu" "$claude_capture_path" "$HOME/.local/bin/claude-usage-statusline"
-echo "Codex Usage Menu has been removed."
+echo "Agent Usage Menu has been removed."

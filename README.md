@@ -1,4 +1,4 @@
-# Codex Usage Menu
+# Agent Usage Menu
 
 A tiny native macOS menu-bar app that keeps your Codex and Claude Code usage visible. Choose either provider or both: when both are available, their lowest remaining quotas appear together in the menu bar (`Codex 84% · Claude 77%`).
 
@@ -8,9 +8,15 @@ It uses the Codex CLI and Claude Code already signed in on your Mac; it does not
 
 ## Preview
 
-![Illustrative preview of the Codex Usage Menu popover](assets/menu-preview.png)
+### Codex
 
-*Illustrative preview of the native menu-bar interface. Your available quota windows, percentages, and reset times will reflect your own account.*
+![Illustrative preview of the Codex usage popover](assets/menu-preview.png)
+
+### Claude Code
+
+![Illustrative preview of the Claude Code usage popover](assets/claude-code-preview.png)
+
+*Illustrative previews of the native menu-bar interface. Your available quota windows, percentages, and reset times will reflect your own account.*
 
 ## Requirements
 
@@ -24,8 +30,8 @@ Codex and Claude Code are independently optional: install the utility once and u
 ## Install
 
 ```zsh
-git clone https://github.com/saivarun1410/codex-usage-menu.git
-cd codex-usage-menu
+git clone https://github.com/saivarun1410/agent-usage-menu.git
+cd agent-usage-menu
 ./scripts/install.sh
 ```
 
@@ -37,7 +43,7 @@ To add Claude Code support at install time, use:
 
 The installer compiles the app, adds it to your user LaunchAgents, and starts it. You only need to install it once: macOS starts it automatically after every future login and keeps it running quietly in the menu bar. You do not need to keep a terminal open or run a command again.
 
-Choosing **Quit Codex Usage Menu** from the menu stops monitoring until you launch the app again or log in next time. To remove it permanently:
+Choosing **Quit Agent Usage Menu** from the menu stops monitoring until you launch the app again or log in next time. To remove it permanently:
 
 ```zsh
 ./scripts/uninstall.sh
