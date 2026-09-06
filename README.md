@@ -20,7 +20,9 @@ cd codex-usage-menu
 ./scripts/install.sh
 ```
 
-The installer compiles the app, adds it to your user LaunchAgents, and starts it. It automatically starts after future logins. To stop it permanently:
+The installer compiles the app, adds it to your user LaunchAgents, and starts it. You only need to install it once: macOS starts it automatically after every future login and keeps it running quietly in the menu bar. You do not need to keep a terminal open or run a command again.
+
+Choosing **Quit Codex Usage Menu** from the menu stops monitoring until you launch the app again or log in next time. To remove it permanently:
 
 ```zsh
 ./scripts/uninstall.sh
