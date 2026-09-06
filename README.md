@@ -23,10 +23,12 @@ Codex and Claude Code are independently optional: install the utility once and u
 
 ## Install
 
-### npm (recommended)
+### npm
+
+Install the packaged utility directly from this public repository:
 
 ```zsh
-npm install -g agent-usage-menu
+npm install -g github:saivarun1410/agent-usage-menu
 agent-usage-menu install
 ```
 
