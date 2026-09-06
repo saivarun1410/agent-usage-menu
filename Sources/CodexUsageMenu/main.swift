@@ -88,12 +88,10 @@ final class UsageMonitor: ObservableObject {
     init() {
         refresh()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            self?.refresh()
+            Task { @MainActor [weak self] in
+                self?.refresh()
+            }
         }
-    }
-
-    deinit {
-        refreshTimer?.invalidate()
     }
 
     var menuBarTitle: String {
