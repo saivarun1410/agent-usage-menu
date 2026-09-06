@@ -97,7 +97,7 @@ struct ClaudeUsageCapture {
         guard let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             throw CaptureError.applicationSupportUnavailable
         }
-        return applicationSupport.appendingPathComponent("CodexUsageMenu", isDirectory: true)
+        return applicationSupport.appendingPathComponent("AgentUsageMenu", isDirectory: true)
     }
 }
 

@@ -3,14 +3,16 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.codexusagemenu.app</string>
+  <string>com.agentusagemenu.app</string>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/zsh</string>
     <string>-lc</string>
-    <string>exec "$HOME/.local/bin/codex-usage-menu"</string>
+    <string>exec "$HOME/.local/bin/agent-usage-menu"</string>
   </array>
   <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
   <true/>
   <key>ProcessType</key>
   <string>Interactive</string>

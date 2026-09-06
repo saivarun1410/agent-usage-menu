@@ -1,0 +1,23 @@
+{
+  "name": "agent-usage-menu",
+  "version": "1.0.0",
+  "description": "Native macOS menu-bar usage monitor for Codex and Claude Code",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/saivarun1410/agent-usage-menu.git"
+  },
+  "bugs": {
+    "url": "https://github.com/saivarun1410/agent-usage-menu/issues"
+  },
+  "homepage": "https://github.com/saivarun1410/agent-usage-menu#readme",
+  "keywords": ["macos", "menu-bar", "codex", "claude-code", "usage", "swift"],
+  "os": ["darwin"],
+  "bin": {
+    "agent-usage-menu": "bin/agent-usage-menu.js"
+  },
+  "files": ["Package.swift", "Sources", "scripts", "launchd", "bin", "assets", "README.md", "LICENSE"],
+  "engines": {
+    "node": ">=18"
+  }
+}

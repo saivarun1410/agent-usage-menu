@@ -1,6 +1,6 @@
 # Agent Usage Menu
 
-A tiny native macOS menu-bar app that keeps your Codex and Claude Code usage visible. Choose either provider or both: when both are available, their lowest remaining quotas appear together in the menu bar (`Codex 84% · Claude 77%`).
+A tiny native macOS menu-bar app that keeps Codex and Claude Code usage visible. The single **Agents** menu-bar label opens one tabbed popover: Codex is selected by default when both are available, while a one-provider setup shows only that provider.
 
 It uses the Codex CLI and Claude Code already signed in on your Mac; it does not ask for, transmit, or save credentials.
 
@@ -23,6 +23,21 @@ Codex and Claude Code are independently optional: install the utility once and u
 
 ## Install
 
+### npm (recommended)
+
+```zsh
+npm install -g agent-usage-menu
+agent-usage-menu install
+```
+
+To add Claude Code capture:
+
+```zsh
+agent-usage-menu install --claude
+```
+
+### From source
+
 ```zsh
 git clone https://github.com/saivarun1410/agent-usage-menu.git
 cd agent-usage-menu
@@ -35,12 +50,20 @@ To add Claude Code support at install time, use:
 ./scripts/install.sh --claude
 ```
 
-The installer compiles the app, adds it to your user LaunchAgents, and starts it. You only need to install it once: macOS starts it automatically after every future login and keeps it running quietly in the menu bar. You do not need to keep a terminal open or run a command again.
+The installer compiles the app, adds it to your user LaunchAgents, and starts it. You only need to install it once: macOS starts it automatically after every future login and relaunches it if it unexpectedly exits. You do not need to keep a terminal open or run a command again.
 
-Choosing **Quit Agent Usage Menu** from the menu stops monitoring until you launch the app again or log in next time. To remove it permanently:
+Choosing **Quit Agent Usage Menu** from the popover is the normal way to stop monitoring; it unloads the launch agent. `swift run AgentUsageMenu` is only a development command, so stopping that Terminal process also stops that temporary copy.
+
+To remove the installed utility permanently:
 
 ```zsh
 ./scripts/uninstall.sh
+```
+
+Or, for the npm install:
+
+```zsh
+agent-usage-menu uninstall
 ```
 
 ## How it works
@@ -55,6 +78,8 @@ This uses a local Codex app-server capability rather than scraping a web page. I
 
 Claude Code publishes 5-hour and 7-day rate-limit data through its official [status-line JSON payload](https://code.claude.com/docs/en/statusline). With `--claude`, this utility installs a small local status-line command that saves only those percentages and reset timestamps; the menu app reads that local record each minute. Claude Code updates the record while a Claude session is active, so the popover shows when it was last captured.
 
+When Claude Code is installed but has not yet returned a response in a session, its tab is still shown with a waiting state. It fills in after the first rate-limit payload arrives.
+
 Claude Code allows one `statusLine` command. To protect custom setups, the installer never replaces an existing one. If you already use a custom status line, it leaves it intact and prints an integration note. Adapt that command to forward its JSON input to `~/.local/bin/claude-usage-capture` before it produces its usual output. The capture helper accepts the official JSON on standard input and writes its own short status line to standard output.
 
 The Claude Code payload contains the 5-hour and 7-day windows; a monthly account allowance is not included, so it is not displayed here.
@@ -63,7 +88,7 @@ The Claude Code payload contains the 5-hour and 7-day windows; a monthly account
 
 ```zsh
 swift test
-swift run CodexUsageMenu
+swift run AgentUsageMenu
 ```
 
 ## Privacy

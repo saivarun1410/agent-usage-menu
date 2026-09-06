@@ -1,9 +1,10 @@
 import AppKit
+import Darwin
 import Foundation
 import SwiftUI
 
 @main
-struct CodexUsageMenuApp: App {
+struct AgentUsageMenuApp: App {
     @StateObject private var monitor = UsageMonitor()
 
     var body: some Scene {
@@ -84,6 +85,8 @@ private struct UsageMenu: View {
         }
         if let claude = monitor.claudeSnapshot {
             available.append(Provider(id: .claude, presentation: claude.presentation))
+        } else if monitor.isClaudeCodeInstalled {
+            available.append(Provider(id: .claude, presentation: ClaudeUsageStore.waitingPresentation))
         }
         return available
     }
@@ -114,27 +117,35 @@ private struct UsageMenu: View {
                     .padding(.top, 14)
             }
 
-            ForEach(provider.windows) { window in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(window.name)
-                            .font(.system(size: 14, weight: .semibold))
-                        Spacer()
-                        Text("\(window.remainingPercent)% left")
-                            .font(.system(size: 14, weight: .semibold))
-                            .monospacedDigit()
+            if provider.windows.isEmpty {
+                Text(provider.emptyMessage ?? "Usage is not available yet.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 18)
+            } else {
+                ForEach(provider.windows) { window in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(window.name)
+                                .font(.system(size: 14, weight: .semibold))
+                            Spacer()
+                            Text("\(window.remainingPercent)% left")
+                                .font(.system(size: 14, weight: .semibold))
+                                .monospacedDigit()
+                        }
+                        if let resetText = window.resetText {
+                            Text(resetText)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    if let resetText = window.resetText {
-                        Text(resetText)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 15)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 15)
 
-                if window.id != provider.windows.last?.id {
-                    Divider()
+                    if window.id != provider.windows.last?.id {
+                        Divider()
+                    }
                 }
             }
 
@@ -147,18 +158,22 @@ private struct UsageMenu: View {
                     .padding(.vertical, 12)
             }
 
-            Divider()
-            Text(provider.updatedLabel + " " + provider.updatedAt.formatted(date: .omitted, time: .shortened))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 12)
-            Text(provider.refreshLabel)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
-                .padding(.bottom, 12)
+            if let updatedLabel = provider.updatedLabel, let updatedAt = provider.updatedAt {
+                Divider()
+                Text(updatedLabel + " " + updatedAt.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 12)
+            }
+            if let refreshLabel = provider.refreshLabel {
+                Text(refreshLabel)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, provider.updatedAt == nil ? 0 : 4)
+                    .padding(.bottom, 12)
+            }
         }
         .padding(.horizontal, 18)
     }
@@ -192,12 +207,22 @@ private struct UsageMenu: View {
                 .padding(.horizontal, 18)
                 .padding(.vertical, 13)
             Divider()
-            Button("Quit Agent Usage Menu") { NSApplication.shared.terminate(nil) }
+            Button("Quit Agent Usage Menu") { quitLaunchAgent() }
                 .buttonStyle(.plain)
                 .font(.system(size: 14))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 13)
+        }
+    }
+
+    private func quitLaunchAgent() {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        process.arguments = ["bootout", "gui/\(getuid())/com.agentusagemenu.app"]
+        try? process.run()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            NSApplication.shared.terminate(nil)
         }
     }
 }
@@ -206,6 +231,7 @@ private struct UsageMenu: View {
 final class UsageMonitor: ObservableObject {
     @Published private(set) var codexSnapshot: UsageSnapshot?
     @Published private(set) var claudeSnapshot: ClaudeUsageSnapshot?
+    @Published private(set) var isClaudeCodeInstalled = ClaudeUsageStore.isClaudeCodeInstalled
     @Published private(set) var errorMessage: String?
     @Published private(set) var isRefreshing = false
 
@@ -222,20 +248,21 @@ final class UsageMonitor: ObservableObject {
     }
 
     var menuBarTitle: String {
-        let titles = [
-            codexSnapshot?.windows.map(\.remainingPercent).min().map { "Codex \($0)%" },
-            claudeSnapshot?.windows.map(\.remainingPercent).min().map { "Claude \($0)%" }
-        ].compactMap { $0 }
-        guard !titles.isEmpty else {
-            return errorMessage == nil ? "Codex …" : "Codex —"
+        let remaining = [
+            codexSnapshot?.windows.map(\.remainingPercent).min(),
+            claudeSnapshot?.windows.map(\.remainingPercent).min()
+        ].compactMap { $0 }.min()
+        guard let remaining else {
+            return errorMessage == nil ? "Agents …" : "Agents —"
         }
-        return titles.joined(separator: " · ")
+        return "Agents \(remaining)%"
     }
 
     func refresh() {
         guard !isRefreshing else { return }
         isRefreshing = true
         claudeSnapshot = ClaudeUsageStore.load()
+        isClaudeCodeInstalled = ClaudeUsageStore.isClaudeCodeInstalled
 
         Task {
             do {
@@ -278,7 +305,8 @@ struct UsageSnapshot: Sendable {
             availableResetCredits: availableResetCredits,
             updatedAt: updatedAt,
             updatedLabel: "Updated",
-            refreshLabel: "Automatically refreshes every minute"
+            refreshLabel: "Automatically refreshes every minute",
+            emptyMessage: nil
         )
     }
 
@@ -329,9 +357,10 @@ struct ProviderPresentation: Sendable {
     let detail: String?
     let windows: [UsageSnapshot.Window]
     let availableResetCredits: Int
-    let updatedAt: Date
-    let updatedLabel: String
-    let refreshLabel: String
+    let updatedAt: Date?
+    let updatedLabel: String?
+    let refreshLabel: String?
+    let emptyMessage: String?
 }
 
 struct ClaudeUsageSnapshot: Sendable {
@@ -346,7 +375,8 @@ struct ClaudeUsageSnapshot: Sendable {
             availableResetCredits: 0,
             updatedAt: capturedAt,
             updatedLabel: "Captured",
-            refreshLabel: "Updates while Claude Code is active"
+            refreshLabel: "Updates while Claude Code is active",
+            emptyMessage: nil
         )
     }
 }
@@ -354,14 +384,37 @@ struct ClaudeUsageSnapshot: Sendable {
 struct ClaudeUsageStore {
     private static let fileName = "claude-rate-limits.json"
 
+    static var isClaudeCodeInstalled: Bool {
+        let candidates = [
+            "/opt/homebrew/bin/claude",
+            "/usr/local/bin/claude",
+            NSHomeDirectory() + "/.local/bin/claude"
+        ]
+        return candidates.contains { FileManager.default.isExecutableFile(atPath: $0) }
+    }
+
+    static var waitingPresentation: ProviderPresentation {
+        ProviderPresentation(
+            name: "Claude Code",
+            detail: "Waiting for session data",
+            windows: [],
+            availableResetCredits: 0,
+            updatedAt: nil,
+            updatedLabel: nil,
+            refreshLabel: "The tab updates after Claude Code receives a response.",
+            emptyMessage: "Claude Code is installed. Usage has not been captured yet."
+        )
+    }
+
     static func load() -> ClaudeUsageSnapshot? {
         guard let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             return nil
         }
-        let url = applicationSupport
-            .appendingPathComponent("CodexUsageMenu", isDirectory: true)
-            .appendingPathComponent(fileName)
-        guard let data = try? Data(contentsOf: url) else { return nil }
+        let directories = ["AgentUsageMenu", "CodexUsageMenu"]
+        guard let data = directories.lazy
+            .map({ applicationSupport.appendingPathComponent($0, isDirectory: true).appendingPathComponent(fileName) })
+            .compactMap({ try? Data(contentsOf: $0) })
+            .first else { return nil }
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601

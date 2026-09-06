@@ -2,10 +2,10 @@
 import PackageDescription
 
 let package = Package(
-    name: "CodexUsageMenu",
+    name: "AgentUsageMenu",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "CodexUsageMenu", targets: ["CodexUsageMenu"]),
+        .executable(name: "AgentUsageMenu", targets: ["CodexUsageMenu"]),
         .executable(name: "ClaudeUsageCapture", targets: ["ClaudeUsageCapture"])
     ],
     targets: [
