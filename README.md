@@ -25,21 +25,41 @@ Codex and Claude Code are independent. Install the utility once, then use either
 
 ## Install
 
-### Codex only
+### Fastest: one command
+
+For Codex:
+
+```zsh
+npx --yes agent-usage-menu
+```
+
+For Codex and Claude Code:
+
+```zsh
+npx --yes agent-usage-menu install --claude
+```
+
+`npx` downloads the package, compiles the native app, starts it, and registers it to start automatically at login. The menu-bar item appears when the command finishes; you do not need to keep that Terminal window open.
+
+### Global npm install
+
+Use this if you want to keep the `agent-usage-menu` command available in your shell:
+
+#### Codex only
 
 ```zsh
 npm install -g agent-usage-menu
 agent-usage-menu install
 ```
 
-### Codex and Claude Code
+#### Codex and Claude Code
 
 ```zsh
 npm install -g agent-usage-menu
 agent-usage-menu install --claude
 ```
 
-That is all. The installer compiles the native menu-bar app, starts it, and registers it to start automatically at every login. You do not need to leave a Terminal window open.
+Both installation methods compile the native menu-bar app, start it, and register it to start automatically at every login. You do not need to leave a Terminal window open.
 
 If you quit the app from its popover, start it again with:
 
