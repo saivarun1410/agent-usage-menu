@@ -92,6 +92,8 @@ The app starts the signed-in local `codex` CLI briefly, reads its current rate l
 
 Start or resume a Claude Code session and receive one response to populate the Claude tab for the first time. Claude Code does not include monthly allowance data in this payload, so the app cannot display it.
 
+If you sign out of Claude Code, the app clears its cached Claude usage and removes Claude from the menu until you sign in again.
+
 ### Existing Claude status line
 
 Claude Code supports one status-line command. If you already have a custom one, the installer leaves it untouched. Add this after the line that reads its JSON input, before it prints its normal output:
