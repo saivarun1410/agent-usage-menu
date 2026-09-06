@@ -248,14 +248,14 @@ final class UsageMonitor: ObservableObject {
     }
 
     var menuBarTitle: String {
-        let remaining = [
-            codexSnapshot?.windows.map(\.remainingPercent).min(),
-            claudeSnapshot?.windows.map(\.remainingPercent).min()
-        ].compactMap { $0 }.min()
-        guard let remaining else {
+        let labels = [
+            codexSnapshot?.windows.map(\.remainingPercent).min().map { "Codex \($0)%" },
+            claudeSnapshot?.windows.map(\.remainingPercent).min().map { "Claude \($0)%" }
+        ].compactMap { $0 }
+        guard !labels.isEmpty else {
             return errorMessage == nil ? "Agents …" : "Agents —"
         }
-        return "Agents \(remaining)%"
+        return labels.joined(separator: " | ")
     }
 
     func refresh() {
