@@ -18,20 +18,21 @@ struct CodexUsageMenuApp: App {
 
 private struct UsageMenu: View {
     @ObservedObject var monitor: UsageMonitor
+    @State private var selectedProvider: ProviderID = .codex
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
 
-            if let codex = monitor.codexSnapshot, let claude = monitor.claudeSnapshot {
-                providerContent(codex.presentation)
-                Divider()
-                providerContent(claude.presentation)
-            } else if let codex = monitor.codexSnapshot {
-                providerContent(codex.presentation)
-            } else if let claude = monitor.claudeSnapshot {
-                providerContent(claude.presentation)
+            if !providers.isEmpty {
+                if providers.count > 1 {
+                    providerTabs
+                    Divider()
+                }
+                if let provider = displayedProvider {
+                    providerContent(provider.presentation, showsProviderName: providers.count == 1)
+                }
             } else if let error = monitor.errorMessage {
                 Text(error)
                     .font(.system(size: 12))
@@ -55,7 +56,7 @@ private struct UsageMenu: View {
         VStack(alignment: .leading, spacing: 3) {
             Text("Agent Usage")
                 .font(.system(size: 18, weight: .semibold))
-            Text("Codex and Claude Code")
+            Text("Local rate-limit monitor")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
         }
@@ -64,19 +65,54 @@ private struct UsageMenu: View {
         .padding(.vertical, 15)
     }
 
-    private func providerContent(_ provider: ProviderPresentation) -> some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(provider.name)
-                    .font(.system(size: 14, weight: .semibold))
-                Spacer()
-                if let detail = provider.detail {
-                    Text(detail)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
+    private var providerTabs: some View {
+        Picker("Provider", selection: $selectedProvider) {
+            ForEach(providers) { provider in
+                Text(provider.id.label).tag(provider.id)
             }
-            .padding(.top, 14)
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+    }
+
+    private var providers: [Provider] {
+        var available: [Provider] = []
+        if let codex = monitor.codexSnapshot {
+            available.append(Provider(id: .codex, presentation: codex.presentation))
+        }
+        if let claude = monitor.claudeSnapshot {
+            available.append(Provider(id: .claude, presentation: claude.presentation))
+        }
+        return available
+    }
+
+    private var displayedProvider: Provider? {
+        providers.first(where: { $0.id == selectedProvider }) ?? providers.first
+    }
+
+    private func providerContent(_ provider: ProviderPresentation, showsProviderName: Bool) -> some View {
+        VStack(spacing: 0) {
+            if showsProviderName {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(provider.name)
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer()
+                    if let detail = provider.detail {
+                        Text(detail)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 14)
+            } else if let detail = provider.detail {
+                Text(detail)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 14)
+            }
 
             ForEach(provider.windows) { window in
                 VStack(alignment: .leading, spacing: 4) {
@@ -125,6 +161,25 @@ private struct UsageMenu: View {
                 .padding(.bottom, 12)
         }
         .padding(.horizontal, 18)
+    }
+
+    private enum ProviderID: String, Identifiable {
+        case codex
+        case claude
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .codex: "Codex"
+            case .claude: "Claude Code"
+            }
+        }
+    }
+
+    private struct Provider: Identifiable {
+        let id: ProviderID
+        let presentation: ProviderPresentation
     }
 
     private var footer: some View {

@@ -8,15 +8,9 @@ It uses the Codex CLI and Claude Code already signed in on your Mac; it does not
 
 ## Preview
 
-### Codex
+![Illustrative preview of the Agent Usage Menu with Codex and Claude Code tabs](assets/agent-usage-preview.png)
 
-![Illustrative preview of the Codex usage popover](assets/menu-preview.png)
-
-### Claude Code
-
-![Illustrative preview of the Claude Code usage popover](assets/claude-code-preview.png)
-
-*Illustrative previews of the native menu-bar interface. Your available quota windows, percentages, and reset times will reflect your own account.*
+*Illustrative preview of the one native menu-bar popover. When both providers are available, Codex is selected by default and Claude Code is available in the second tab. When only one provider is available, only that provider is shown.*
 
 ## Requirements
 
