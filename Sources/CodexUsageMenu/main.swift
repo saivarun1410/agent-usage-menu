@@ -64,6 +64,9 @@ private struct UsageMenu: View {
             }
 
             Divider()
+            Text("Automatically refreshes every minute")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Button("Refresh now") { monitor.refresh() }
                 .disabled(monitor.isRefreshing)
             Button("Quit Codex Usage Menu") { NSApplication.shared.terminate(nil) }
@@ -80,19 +83,17 @@ final class UsageMonitor: ObservableObject {
     @Published private(set) var isRefreshing = false
 
     private let client = CodexAppServerClient()
-    private var refreshTask: Task<Void, Never>?
+    private var refreshTimer: Timer?
 
     init() {
-        refreshTask = Task { [weak self] in
-            while !Task.isCancelled {
-                self?.refresh()
-                try? await Task.sleep(for: .seconds(60))
-            }
+        refresh()
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.refresh()
         }
     }
 
     deinit {
-        refreshTask?.cancel()
+        refreshTimer?.invalidate()
     }
 
     var menuBarTitle: String {
