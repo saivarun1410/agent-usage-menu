@@ -1,6 +1,6 @@
 # Agent Usage Menu
 
-A tiny native macOS menu-bar app that keeps Codex and Claude Code usage visible. The single **Agents** menu-bar label opens one tabbed popover: Codex is selected by default when both are available, while a one-provider setup shows only that provider.
+A tiny native macOS menu-bar app that keeps Codex and Claude Code usage visible. When both providers have data, the menu bar shows each remaining quota separately (`Codex 65% | Claude 80%`), while one-provider setups show only that provider. Clicking it opens one tabbed popover, with Codex selected by default when both are available.
 
 It uses the Codex CLI and Claude Code already signed in on your Mac; it does not ask for, transmit, or save credentials.
 
@@ -25,10 +25,10 @@ Codex and Claude Code are independently optional: install the utility once and u
 
 ### npm
 
-Install the packaged utility directly from this public repository:
+Install from the public npm registry:
 
 ```zsh
-npm install -g github:saivarun1410/agent-usage-menu
+npm install -g agent-usage-menu
 agent-usage-menu install
 ```
 
