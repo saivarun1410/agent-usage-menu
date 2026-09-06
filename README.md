@@ -8,7 +8,7 @@ When both providers have usage data, the menu bar shows `Codex 65% | Claude 80%`
 
 ## Preview
 
-![Illustrative preview of the Agent Usage Menu with Codex and Claude Code tabs](assets/agent-usage-preview.png)
+![Illustrative preview of the Agent Usage Menu with Codex and Claude Code tabs](assets/agent-usage-preview-v2.png)
 
 *Illustrative preview. Your usage percentages and reset times come from your own signed-in accounts.*
 
