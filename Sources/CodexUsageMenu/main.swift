@@ -83,10 +83,12 @@ private struct UsageMenu: View {
         if let codex = monitor.codexSnapshot {
             available.append(Provider(id: .codex, presentation: codex.presentation))
         }
-        if let claude = monitor.claudeSnapshot {
-            available.append(Provider(id: .claude, presentation: claude.presentation))
-        } else if monitor.isClaudeCodeInstalled {
-            available.append(Provider(id: .claude, presentation: ClaudeUsageStore.waitingPresentation))
+        if monitor.claudeAccountState == .signedIn {
+            if let claude = monitor.claudeSnapshot {
+                available.append(Provider(id: .claude, presentation: claude.presentation))
+            } else {
+                available.append(Provider(id: .claude, presentation: ClaudeUsageStore.waitingPresentation))
+            }
         }
         return available
     }
@@ -231,7 +233,7 @@ private struct UsageMenu: View {
 final class UsageMonitor: ObservableObject {
     @Published private(set) var codexSnapshot: UsageSnapshot?
     @Published private(set) var claudeSnapshot: ClaudeUsageSnapshot?
-    @Published private(set) var isClaudeCodeInstalled = ClaudeUsageStore.isClaudeCodeInstalled
+    @Published private(set) var claudeAccountState = ClaudeUsageStore.accountState()
     @Published private(set) var errorMessage: String?
     @Published private(set) var isRefreshing = false
 
@@ -261,8 +263,15 @@ final class UsageMonitor: ObservableObject {
     func refresh() {
         guard !isRefreshing else { return }
         isRefreshing = true
-        claudeSnapshot = ClaudeUsageStore.load()
-        isClaudeCodeInstalled = ClaudeUsageStore.isClaudeCodeInstalled
+        claudeAccountState = ClaudeUsageStore.accountState()
+        if claudeAccountState == .signedIn {
+            claudeSnapshot = ClaudeUsageStore.load()
+        } else {
+            claudeSnapshot = nil
+            if claudeAccountState == .signedOut {
+                ClaudeUsageStore.clearCapturedUsage()
+            }
+        }
 
         Task {
             do {
@@ -384,13 +393,45 @@ struct ClaudeUsageSnapshot: Sendable {
 struct ClaudeUsageStore {
     private static let fileName = "claude-rate-limits.json"
 
-    static var isClaudeCodeInstalled: Bool {
+    static func accountState() -> ClaudeCodeAccountState {
+        guard let executable = claudeExecutable() else { return .unavailable }
+
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = executable
+        process.arguments = ["auth", "status"]
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+
+        guard (try? process.run()) != nil else { return .signedOut }
+        process.waitUntilExit()
+        guard let status = try? JSONDecoder().decode(ClaudeAuthStatus.self, from: output.fileHandleForReading.readDataToEndOfFile()) else {
+            return .signedOut
+        }
+        return status.loggedIn ? .signedIn : .signedOut
+    }
+
+    static func clearCapturedUsage() {
+        guard let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return
+        }
+        for directory in ["AgentUsageMenu", "CodexUsageMenu"] {
+            let url = applicationSupport
+                .appendingPathComponent(directory, isDirectory: true)
+                .appendingPathComponent(fileName)
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private static func claudeExecutable() -> URL? {
         let candidates = [
             "/opt/homebrew/bin/claude",
             "/usr/local/bin/claude",
             NSHomeDirectory() + "/.local/bin/claude"
         ]
-        return candidates.contains { FileManager.default.isExecutableFile(atPath: $0) }
+        return candidates
+            .first(where: { FileManager.default.isExecutableFile(atPath: $0) })
+            .map(URL.init(fileURLWithPath:))
     }
 
     static var waitingPresentation: ProviderPresentation {
@@ -430,6 +471,16 @@ struct ClaudeUsageStore {
         }
         return windows.isEmpty ? nil : ClaudeUsageSnapshot(windows: windows, capturedAt: capture.capturedAt)
     }
+}
+
+enum ClaudeCodeAccountState: Equatable {
+    case unavailable
+    case signedOut
+    case signedIn
+}
+
+private struct ClaudeAuthStatus: Decodable {
+    let loggedIn: Bool
 }
 
 struct ClaudeRateLimitCapture: Codable, Sendable {
