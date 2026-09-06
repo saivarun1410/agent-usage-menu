@@ -1,90 +1,88 @@
 # Agent Usage Menu
 
-A tiny native macOS menu-bar app that keeps Codex and Claude Code usage visible. When both providers have data, the menu bar shows each remaining quota separately (`Codex 65% | Claude 80%`), while one-provider setups show only that provider. Clicking it opens one tabbed popover, with Codex selected by default when both are available.
+See your Codex and Claude Code rate limits in the macOS menu bar.
 
-It uses the Codex CLI and Claude Code already signed in on your Mac; it does not ask for, transmit, or save credentials.
+When both providers have usage data, the menu bar shows `Codex 65% | Claude 80%`. Click it to open one popover with a tab for each provider. Codex is selected first; if you use only one provider, you see only that provider.
 
-![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black?logo=apple) ![Swift 6](https://img.shields.io/badge/Swift-6-orange?logo=swift)
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-black?logo=apple) ![npm](https://img.shields.io/npm/v/agent-usage-menu?logo=npm) ![Swift 6](https://img.shields.io/badge/Swift-6-orange?logo=swift)
 
 ## Preview
 
 ![Illustrative preview of the Agent Usage Menu with Codex and Claude Code tabs](assets/agent-usage-preview.png)
 
-*Illustrative preview of the one native menu-bar popover. When both providers are available, Codex is selected by default and Claude Code is available in the second tab. When only one provider is available, only that provider is shown.*
+*Illustrative preview. Your usage percentages and reset times come from your own signed-in accounts.*
 
 ## Requirements
 
 - macOS 13 (Ventura) or later
-- Xcode Command Line Tools (`xcode-select --install`)
-- Codex CLI installed and signed in (`codex login`) to monitor Codex
-- [Claude Code](https://code.claude.com/docs/en/overview) installed and signed in to monitor Claude Code
+- Node.js 18 or later
+- Xcode Command Line Tools — run `xcode-select --install` if needed
+- At least one signed-in provider:
+  - Codex CLI: `codex login`
+  - [Claude Code](https://code.claude.com/docs/en/overview)
 
-Codex and Claude Code are independently optional: install the utility once and use whichever provider(s) you have.
+Codex and Claude Code are independent. Install the utility once, then use either one or both.
 
 ## Install
 
-### npm
-
-Install from the public npm registry:
+### Codex only
 
 ```zsh
 npm install -g agent-usage-menu
 agent-usage-menu install
 ```
 
-To add Claude Code capture:
+### Codex and Claude Code
 
 ```zsh
+npm install -g agent-usage-menu
 agent-usage-menu install --claude
 ```
 
-### From source
+That is all. The installer compiles the native menu-bar app, starts it, and registers it to start automatically at every login. You do not need to leave a Terminal window open.
+
+If you quit the app from its popover, start it again with:
 
 ```zsh
-git clone https://github.com/saivarun1410/agent-usage-menu.git
-cd agent-usage-menu
-./scripts/install.sh
+agent-usage-menu start
 ```
 
-To add Claude Code support at install time, use:
-
-```zsh
-./scripts/install.sh --claude
-```
-
-The installer compiles the app, adds it to your user LaunchAgents, and starts it. You only need to install it once: macOS starts it automatically after every future login and relaunches it if it unexpectedly exits. You do not need to keep a terminal open or run a command again.
-
-Choosing **Quit Agent Usage Menu** from the popover is the normal way to stop monitoring; it unloads the launch agent. `swift run AgentUsageMenu` is only a development command, so stopping that Terminal process also stops that temporary copy.
-
-To remove the installed utility permanently:
-
-```zsh
-./scripts/uninstall.sh
-```
-
-Or, for the npm install:
+To remove it:
 
 ```zsh
 agent-usage-menu uninstall
 ```
 
-## How it works
+## How your usage is captured
+
+| Provider | What the app reads | When it updates | What is saved locally |
+| --- | --- | --- | --- |
+| Codex | Your already signed-in Codex CLI’s local rate-limit response | Every minute, plus **Refresh now** | Nothing |
+| Claude Code | The official Claude Code status-line rate-limit payload | After the first completed Claude response, then during session events / every minute | Latest percentages and reset times only |
+
+The app never asks for your password, copies tokens, or sends account data to another service.
 
 ### Codex
 
-Every 60 seconds, the app starts the locally installed `codex app-server --stdio`, initializes a local JSON-RPC session, and reads `account/rateLimits/read`. It displays the returned rate-limit windows and then closes that helper process. **Refresh now** is only a manual fallback; no terminal command or user action is needed for normal updates.
-
-This uses a local Codex app-server capability rather than scraping a web page. It is read-only, and it never reads, copies, or persists your Codex authentication files. Codex does not currently document this protocol as a public stable API, so a future Codex update may require an update to this utility.
+The app starts the signed-in local `codex` CLI briefly, reads its current rate limits, then exits that helper. It does not scrape a web page or store Codex credentials.
 
 ### Claude Code
 
-Claude Code publishes 5-hour and 7-day rate-limit data through its official [status-line JSON payload](https://code.claude.com/docs/en/statusline). With `--claude`, this utility installs a small local status-line command that saves only those percentages and reset timestamps; the menu app reads that local record each minute. Claude Code updates the record while a Claude session is active, so the popover shows when it was last captured.
+`--claude` adds a small local Claude Code status-line helper. Claude Code sends that helper its own session JSON; the helper records only the 5-hour and weekly percentages plus reset times for the menu app to display.
 
-When Claude Code is installed but has not yet returned a response in a session, its tab is still shown with a waiting state. It fills in after the first rate-limit payload arrives.
+Start or resume a Claude Code session and receive one response to populate the Claude tab for the first time. Claude Code does not include monthly allowance data in this payload, so the app cannot display it.
 
-Claude Code allows one `statusLine` command. To protect custom setups, the installer never replaces an existing one. If you already use a custom status line, it leaves it intact and prints an integration note. Adapt that command to forward its JSON input to `~/.local/bin/claude-usage-capture` before it produces its usual output. The capture helper accepts the official JSON on standard input and writes its own short status line to standard output.
+### Existing Claude status line
 
-The Claude Code payload contains the 5-hour and 7-day windows; a monthly account allowance is not included, so it is not displayed here.
+Claude Code supports one status-line command. If you already have a custom one, the installer leaves it untouched. Add this after the line that reads its JSON input, before it prints its normal output:
+
+```bash
+printf '%s' "$input" | "$HOME/.local/bin/claude-usage-capture" >/dev/null 2>&1 || true
+```
+
+## Privacy
+
+No analytics or tracking. Codex usage is read directly from your local signed-in CLI. For Claude Code, the only persisted record contains the latest rate-limit percentages and reset timestamps.
 
 ## Development
 
@@ -92,10 +90,6 @@ The Claude Code payload contains the 5-hour and 7-day windows; a monthly account
 swift test
 swift run AgentUsageMenu
 ```
-
-## Privacy
-
-No analytics, network client, account token, or tracking is included. The Codex CLI itself contacts OpenAI to retrieve your current account quota, exactly as it does when its usage status is shown. For Claude Code, the only locally persisted information is the latest two rate-limit percentages and reset timestamps supplied by its status-line payload.
 
 ## License
 
