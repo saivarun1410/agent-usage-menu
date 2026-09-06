@@ -24,8 +24,14 @@ private struct UsageMenu: View {
             header
             Divider()
 
-            if let snapshot = monitor.snapshot {
-                snapshotContent(snapshot)
+            if let codex = monitor.codexSnapshot, let claude = monitor.claudeSnapshot {
+                providerContent(codex.presentation)
+                Divider()
+                providerContent(claude.presentation)
+            } else if let codex = monitor.codexSnapshot {
+                providerContent(codex.presentation)
+            } else if let claude = monitor.claudeSnapshot {
+                providerContent(claude.presentation)
             } else if let error = monitor.errorMessage {
                 Text(error)
                     .font(.system(size: 12))
@@ -47,22 +53,32 @@ private struct UsageMenu: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text("Codex Usage")
+            Text("Agent Usage")
                 .font(.system(size: 18, weight: .semibold))
-            if let plan = monitor.snapshot?.planType {
-                Text(plan.capitalized + " plan")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
+            Text("Codex and Claude Code")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 18)
         .padding(.vertical, 15)
     }
 
-    private func snapshotContent(_ snapshot: UsageSnapshot) -> some View {
+    private func providerContent(_ provider: ProviderPresentation) -> some View {
         VStack(spacing: 0) {
-            ForEach(snapshot.windows) { window in
+            HStack(alignment: .firstTextBaseline) {
+                Text(provider.name)
+                    .font(.system(size: 14, weight: .semibold))
+                Spacer()
+                if let detail = provider.detail {
+                    Text(detail)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.top, 14)
+
+            ForEach(provider.windows) { window in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(window.name)
@@ -81,14 +97,14 @@ private struct UsageMenu: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 15)
 
-                if window.id != snapshot.windows.last?.id {
+                if window.id != provider.windows.last?.id {
                     Divider()
                 }
             }
 
-            if snapshot.availableResetCredits > 0 {
+            if provider.availableResetCredits > 0 {
                 Divider()
-                Text("\(snapshot.availableResetCredits) reset credit available")
+                Text("\(provider.availableResetCredits) reset credit available")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -96,12 +112,12 @@ private struct UsageMenu: View {
             }
 
             Divider()
-            Text("Updated \(snapshot.updatedAt.formatted(date: .omitted, time: .shortened))")
+            Text(provider.updatedLabel + " " + provider.updatedAt.formatted(date: .omitted, time: .shortened))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 12)
-            Text("Automatically refreshes every minute")
+            Text(provider.refreshLabel)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -133,7 +149,8 @@ private struct UsageMenu: View {
 
 @MainActor
 final class UsageMonitor: ObservableObject {
-    @Published private(set) var snapshot: UsageSnapshot?
+    @Published private(set) var codexSnapshot: UsageSnapshot?
+    @Published private(set) var claudeSnapshot: ClaudeUsageSnapshot?
     @Published private(set) var errorMessage: String?
     @Published private(set) var isRefreshing = false
 
@@ -150,23 +167,30 @@ final class UsageMonitor: ObservableObject {
     }
 
     var menuBarTitle: String {
-        guard let leastRemaining = snapshot?.windows.map(\.remainingPercent).min() else {
+        let titles = [
+            codexSnapshot?.windows.map(\.remainingPercent).min().map { "Codex \($0)%" },
+            claudeSnapshot?.windows.map(\.remainingPercent).min().map { "Claude \($0)%" }
+        ].compactMap { $0 }
+        guard !titles.isEmpty else {
             return errorMessage == nil ? "Codex …" : "Codex —"
         }
-        return "Codex \(leastRemaining)%"
+        return titles.joined(separator: " · ")
     }
 
     func refresh() {
         guard !isRefreshing else { return }
         isRefreshing = true
+        claudeSnapshot = ClaudeUsageStore.load()
 
         Task {
             do {
                 let response = try await client.readRateLimits()
-                snapshot = UsageSnapshot(response: response, updatedAt: .now)
+                codexSnapshot = UsageSnapshot(response: response, updatedAt: .now)
                 errorMessage = nil
             } catch {
-                errorMessage = error.localizedDescription
+                if claudeSnapshot == nil {
+                    errorMessage = error.localizedDescription
+                }
             }
             isRefreshing = false
         }
@@ -190,6 +214,18 @@ struct UsageSnapshot: Sendable {
     let windows: [Window]
     let availableResetCredits: Int
     let updatedAt: Date
+
+    var presentation: ProviderPresentation {
+        ProviderPresentation(
+            name: "Codex",
+            detail: planType.map { $0.capitalized + " plan" },
+            windows: windows,
+            availableResetCredits: availableResetCredits,
+            updatedAt: updatedAt,
+            updatedLabel: "Updated",
+            refreshLabel: "Automatically refreshes every minute"
+        )
+    }
 
     init(response: GetAccountRateLimitsResponse, updatedAt: Date) {
         let limits = response.rateLimitsByLimitId ?? [response.rateLimits.limitId ?? "codex": response.rateLimits]
@@ -231,6 +267,73 @@ struct UsageSnapshot: Sendable {
         }
         return "\(bucketName) · \(durationName)"
     }
+}
+
+struct ProviderPresentation: Sendable {
+    let name: String
+    let detail: String?
+    let windows: [UsageSnapshot.Window]
+    let availableResetCredits: Int
+    let updatedAt: Date
+    let updatedLabel: String
+    let refreshLabel: String
+}
+
+struct ClaudeUsageSnapshot: Sendable {
+    let windows: [UsageSnapshot.Window]
+    let capturedAt: Date
+
+    var presentation: ProviderPresentation {
+        ProviderPresentation(
+            name: "Claude Code",
+            detail: "Latest session",
+            windows: windows,
+            availableResetCredits: 0,
+            updatedAt: capturedAt,
+            updatedLabel: "Captured",
+            refreshLabel: "Updates while Claude Code is active"
+        )
+    }
+}
+
+struct ClaudeUsageStore {
+    private static let fileName = "claude-rate-limits.json"
+
+    static func load() -> ClaudeUsageSnapshot? {
+        guard let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let url = applicationSupport
+            .appendingPathComponent("CodexUsageMenu", isDirectory: true)
+            .appendingPathComponent(fileName)
+        guard let data = try? Data(contentsOf: url) else { return nil }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let capture = try? decoder.decode(ClaudeRateLimitCapture.self, from: data) else { return nil }
+
+        let windows = capture.windows.map { window in
+            UsageSnapshot.Window(
+                id: "claude-\(window.id)",
+                name: window.name,
+                remainingPercent: max(0, 100 - window.usedPercent),
+                resetAt: window.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+            )
+        }
+        return windows.isEmpty ? nil : ClaudeUsageSnapshot(windows: windows, capturedAt: capture.capturedAt)
+    }
+}
+
+struct ClaudeRateLimitCapture: Codable, Sendable {
+    struct Window: Codable, Sendable {
+        let id: String
+        let name: String
+        let usedPercent: Int
+        let resetsAt: Int?
+    }
+
+    let capturedAt: Date
+    let windows: [Window]
 }
 
 actor CodexAppServerClient {
